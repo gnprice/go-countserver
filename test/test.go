@@ -30,9 +30,10 @@ func main() {
 	go parseConnection(conn, ich, och)
 	req := func (cmd string) (reply string) {
 		ich <- cmd
-		reply = <-och
-		return
+		return <-och
 	}
-	req("see a 1")
+	for i := 0; i < 10000; i++ {
+		req("see a 1")
+	}
 	fmt.Println(req("count a"))
 }
