@@ -3,7 +3,10 @@ package main
 import "bufio"
 import "fmt"
 import "net"
+import "os"
+import "strconv"
 import "strings"
+import "time"
 
 func parseConnection(conn net.Conn, ich chan string, och chan string) {
 	bufreader := bufio.NewReader(conn)
@@ -21,6 +24,12 @@ func parseConnection(conn net.Conn, ich chan string, och chan string) {
 }
 
 func main() {
+	if len(os.Args) != 2 {
+		fmt.Printf("usage: %s COUNT\n", os.Args[0])
+		return
+	}
+	count, _ := strconv.Atoi(os.Args[1])
+
 	conn, err := net.Dial("tcp", ":8080")
 	if err != nil {
 		fmt.Println("dial failed:", err)
@@ -32,8 +41,16 @@ func main() {
 		ich <- cmd
 		return <-och
 	}
-	for i := 0; i < 10000; i++ {
+
+	start := time.Now()
+	for i := 0; i < count; i++ {
 		req("see a 1")
 	}
-	fmt.Println(req("count a"))
+	result := req("count a")
+	tm := time.Since(start)
+	qps := float64(count)*float64(time.Second)/float64(tm)
+
+	fmt.Println("result:", result)
+	fmt.Printf("%d iters in %.3fs, %.1f kqps\n",
+		count, float64(tm)/float64(time.Second), qps / 1000.0)
 }
