@@ -3,17 +3,25 @@ package main
 import "bufio"
 import "fmt"
 import "net"
+import "strings"
 
-func handleConnection(conn net.Conn) {
-	fmt.Println("got a connection!", conn)
+func serveConnection(ch chan string) {
+	fmt.Println("connection made")
+	for line := range ch {
+		fmt.Println("got line:", line)
+	}
+	fmt.Println("connection closed")
+}
+
+func parseConnection(conn net.Conn, ch chan string) {
 	bufreader := bufio.NewReader(conn)
 	for {
 		line, err := bufreader.ReadString('\n')
 		if err != nil {
-			fmt.Printf("error on %s: %s\n", conn, err)
+			close(ch)
 			return
 		}
-		fmt.Printf("read a line from %s: %q\n", conn, line)
+		ch <- strings.TrimRight(line, "\n")
 	}
 }
 
@@ -29,6 +37,8 @@ func main() {
 			fmt.Println("accept failed:", err)
 			continue
 		}
-		go handleConnection(conn)
+		ch := make(chan string)
+		go parseConnection(conn, ch)
+		go serveConnection(ch)
 	}
 }
