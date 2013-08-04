@@ -6,6 +6,8 @@ import "net"
 import "strconv"
 import "strings"
 
+const debug = false
+
 type state_t struct {
 	count uint64
 	max uint64
@@ -35,13 +37,17 @@ func serveConnection(ich chan string, och chan string) {
 				s.max = v
 			}
 			s.sum += v
-			fmt.Printf("saw %s %d: now %d %d %d\n",
-				fields[1], v, s.count, s.max, s.sum)
+			if debug {
+				fmt.Printf("saw %s %d: now %d %d %d\n",
+					fields[1], v, s.count, s.max, s.sum)
+			}
 			och <- "ok"
 		case "count":
 			s := getState(fields[1])
-			fmt.Printf("state of %s: now %d %d %d\n",
-				fields[1], s.count, s.max, s.sum)
+			if debug {
+				fmt.Printf("state of %s: now %d %d %d\n",
+					fields[1], s.count, s.max, s.sum)
+			}
 			och <- strconv.FormatUint(s.count, 10)
 		default:
 			och <- "error"
