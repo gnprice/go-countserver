@@ -5,23 +5,26 @@ import "fmt"
 import "net"
 import "strings"
 
-func serveConnection(ch chan string) {
+func serveConnection(ich chan string, och chan string) {
 	fmt.Println("connection made")
-	for line := range ch {
+	for line := range ich {
 		fmt.Println("got line:", line)
+		och <- fmt.Sprintf("Thanks for saying %q!", line)
 	}
 	fmt.Println("connection closed")
 }
 
-func parseConnection(conn net.Conn, ch chan string) {
+func parseConnection(conn net.Conn, ich chan string, och chan string) {
 	bufreader := bufio.NewReader(conn)
 	for {
 		line, err := bufreader.ReadString('\n')
 		if err != nil {
-			close(ch)
+			close(ich)
 			return
 		}
-		ch <- strings.TrimRight(line, "\n")
+		ich <- strings.TrimRight(line, "\n")
+		reply := <-och
+		conn.Write([]byte(reply+"\n"))
 	}
 }
 
@@ -37,8 +40,8 @@ func main() {
 			fmt.Println("accept failed:", err)
 			continue
 		}
-		ch := make(chan string)
-		go parseConnection(conn, ch)
-		go serveConnection(ch)
+		ich, och := make(chan string), make(chan string)
+		go parseConnection(conn, ich, och)
+		go serveConnection(ich, och)
 	}
 }
