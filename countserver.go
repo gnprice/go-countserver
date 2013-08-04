@@ -3,15 +3,50 @@ package main
 import "bufio"
 import "fmt"
 import "net"
+import "strconv"
 import "strings"
 
-func serveConnection(ich chan string, och chan string) {
-	fmt.Println("connection made")
-	for line := range ich {
-		fmt.Println("got line:", line)
-		och <- fmt.Sprintf("Thanks for saying %q!", line)
+type state_t struct {
+	count uint64
+	max uint64
+	sum uint64
+}
+
+var state = make(map[string](*state_t))
+
+func getState(key string) (*state_t) {
+	s := state[key]
+	if s == nil {
+		s = new(state_t)
+		state[key] = s
 	}
-	fmt.Println("connection closed")
+	return s
+}
+
+func serveConnection(ich chan string, och chan string) {
+	for line := range ich {
+		fields := strings.Fields(line)
+		switch cmd := strings.ToLower(fields[0]); cmd {
+		case "see":
+			s := getState(fields[1])
+			v, _ := strconv.ParseUint(fields[2], 10, 64)
+			s.count++
+			if v > s.max {
+				s.max = v
+			}
+			s.sum += v
+			fmt.Printf("saw %s %d: now %d %d %d\n",
+				fields[1], v, s.count, s.max, s.sum)
+			och <- "ok"
+		case "count":
+			s := getState(fields[1])
+			fmt.Printf("state of %s: now %d %d %d\n",
+				fields[1], s.count, s.max, s.sum)
+			och <- strconv.FormatUint(s.count, 10)
+		default:
+			och <- "error"
+		}
+	}
 }
 
 func parseConnection(conn net.Conn, ich chan string, och chan string) {
