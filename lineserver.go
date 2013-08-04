@@ -1,14 +1,20 @@
 package main
 
-// import "bufio"
+import "bufio"
 import "fmt"
 import "net"
 
 func handleConnection(conn net.Conn) {
 	fmt.Println("got a connection!", conn)
-	buf := make([]byte, 32)
-	n, _ := conn.Read(buf)
-	fmt.Printf("read some bytes: %d %q\n", n, buf[:n])
+	bufreader := bufio.NewReader(conn)
+	for {
+		line, err := bufreader.ReadString('\n')
+		if err != nil {
+			fmt.Printf("error on %s: %s\n", conn, err)
+			return
+		}
+		fmt.Printf("read a line from %s: %q\n", conn, line)
+	}
 }
 
 func main() {
